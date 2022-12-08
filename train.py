@@ -35,6 +35,7 @@ def eval(model, loader, evaluator):
 def train(args):
     '''Training loop'''
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = 'cpu'
 
     # Download and process data at './dataset/ogbg_molhiv/'
     dataset = PygGraphPropPredDataset(name="ogbg-molhiv", root='dataset/')
@@ -61,12 +62,11 @@ def train(args):
     # set run name
     wandb.run.name = args.run
 
-    model = GCN(dataset.num_features, args.emb_dim,
-                dataset.num_classes).to(device)
+    model = GCN(dataset.num_features, args.emb_dim).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
-    criterion = torch.nn.BCELoss()
+    criterion = torch.nn.BCELoss().to(device)
 
     evaluator = Evaluator(name="ogbg-molhiv")
 
@@ -81,11 +81,9 @@ def train(args):
                 model.train()
                 optimizer.zero_grad()
 
-                print(batch)
-                out = model(batch.x, batch.edge_index, batch.edge_attr)
-                print(out.shape)
+                out = model(batch.x, batch.edge_index, batch.edge_attr, batch.batch)
 
-                loss = criterion(out, batch.y)
+                loss = criterion(out, batch.y.type(torch.float32))
                 loss.backward()
                 optimizer.step()
 
@@ -111,7 +109,7 @@ if __name__ == "__main__":
     parser.add_argument('--epochs', type=int, default=100, help='total epochs')
     parser.add_argument('--batch_size', type=int, default=8, help='batch size')
     parser.add_argument('--lr', type=float, default=0.001, help='batch size')
-    parser.add_argument('--emb_dim', type=int, default=300,
+    parser.add_argument('--emb_dim', type=int, default=200,
                         help='dimensionality of hidden units in GNNs (default: 300)')
     parser.add_argument('--dw', action=argparse.BooleanOptionalAction,
                         default=False, help='disable wandb, defaults to False')
@@ -120,6 +118,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     args.run = 'simple-gcn'
+    args.batch_size = 2
     args.dw = True
 
     train(args)
