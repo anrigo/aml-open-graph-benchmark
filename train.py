@@ -7,20 +7,26 @@ from tqdm import tqdm
 from models import GCN
 import wandb
 
+from utils import accuracy
+
 
 @torch.no_grad()
-def eval(model, loader, evaluator, device=None):
+def eval(model, loader, evaluator, split=None, device=None):
     '''Evaluate the model'''
     
     if device is None:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    if split is None:
+        split = ''
+    else:
+        split += '_'
 
     model.to(device)
     model.eval()
     y_true = []
     y_pred = []
 
-    for _, batch in enumerate(tqdm(loader, desc="Validation")):
+    for _, batch in enumerate(tqdm(loader, desc="Evaluation")):
         batch = batch.to(device)
 
         pred = model(batch.x, batch.edge_index, batch.edge_attr, batch.batch)
@@ -28,12 +34,15 @@ def eval(model, loader, evaluator, device=None):
         y_true.append(batch.y.view(pred.shape).detach().cpu())
         y_pred.append(pred.detach().cpu())
 
-    y_true = torch.cat(y_true, dim=0).numpy()
-    y_pred = torch.cat(y_pred, dim=0).numpy()
+    y_true = torch.cat(y_true, dim=0)
+    y_pred = torch.cat(y_pred, dim=0)
 
-    input_dict = {"y_true": y_true, "y_pred": y_pred}
+    acc = accuracy(y_true.clone(), y_pred.clone())
 
-    return evaluator.eval(input_dict)
+    input_dict = {"y_true": y_true.numpy(), "y_pred": y_pred.numpy()}
+    rocauc_dict = evaluator.eval(input_dict)
+
+    return {f'{split}accuracy': acc, f'{split}rocauc': rocauc_dict['rocauc']}
 
 
 def train(args):
@@ -100,10 +109,13 @@ def train(args):
 
         # validate
         print('Validating..')
-        train_metrics = eval(model, train_loader, evaluator, device)
-        val_metrics = eval(model, valid_loader, evaluator, device)
+        train_metrics = eval(model, train_loader, evaluator, 'train', device)
+        val_metrics = eval(model, valid_loader, evaluator, 'val', device)
         print(train_metrics)
         print(val_metrics)
+
+        wandb.log(train_metrics)
+        wandb.log(val_metrics)
 
 
 if __name__ == "__main__":
@@ -120,9 +132,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    args.run = 'simple-gcn'
-    args.epochs = 1
-    # args.batch_size = 8
-    args.dw = True
+    # args.run = 'simple-gcn'
+    # args.epochs = 1
+    # args.batch_size = 6
+    # args.dw = True
 
     train(args)

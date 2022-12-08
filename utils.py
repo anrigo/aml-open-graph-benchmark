@@ -11,3 +11,8 @@ def visualize(G: Union[torch_geometric.data.Data, nx.Graph]):
 
     nx.draw_networkx(G, pos=nx.spring_layout(G), with_labels=False)
     plt.show()
+
+
+def accuracy(targets, preds):
+    preds = preds > 0.5
+    return (targets == preds).sum().item() / targets.size(0)
