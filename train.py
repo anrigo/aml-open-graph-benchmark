@@ -1,5 +1,7 @@
 # %
 import argparse
+import os
+from pathlib import Path
 import torch
 from ogb.graphproppred import PygGraphPropPredDataset, Evaluator
 from torch_geometric.loader import DataLoader
@@ -13,7 +15,7 @@ from utils import accuracy
 @torch.no_grad()
 def eval(model, loader, evaluator, split=None, device=None):
     '''Evaluate the model'''
-    
+
     if device is None:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     if split is None:
@@ -93,14 +95,15 @@ def train(args):
                 model.train()
                 optimizer.zero_grad()
 
-                out = model(batch.x, batch.edge_index, batch.edge_attr, batch.batch)
+                out = model(batch.x, batch.edge_index,
+                            batch.edge_attr, batch.batch)
 
                 loss = criterion(out, batch.y.type(torch.float32))
                 loss.backward()
                 optimizer.step()
 
                 # logging
-                tepoch.set_postfix(loss=loss.item())
+                tepoch.set_postfix(loss='%.3f' % loss.item())
 
                 wandb.log({
                     'epoch': epoch,
@@ -117,15 +120,21 @@ def train(args):
         wandb.log(train_metrics)
         wandb.log(val_metrics)
 
+        if not Path('runs', args.run).exists():
+            os.makedirs(args.run)
+
+        torch.save(model.state_dict(), Path('runs', args.run, f'{epoch}.pth'))
+
 
 if __name__ == "__main__":
     # Training settings
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', type=int, default=100, help='total epochs')
-    parser.add_argument('--batch_size', type=int, default=32, help='batch size')
+    parser.add_argument('--batch_size', type=int,
+                        default=64, help='batch size')
     parser.add_argument('--lr', type=float, default=0.001, help='batch size')
-    parser.add_argument('--emb_dim', type=int, default=200,
-                        help='dimensionality of hidden units in GNNs (default: 200)')
+    parser.add_argument('--emb_dim', type=int, default=300,
+                        help='dimensionality of hidden units in GNNs (default: 300)')
     parser.add_argument('--dw', action=argparse.BooleanOptionalAction,
                         default=False, help='disable wandb, defaults to False')
     parser.add_argument('--run', type=str, help='run name')

@@ -19,7 +19,8 @@ class GCN(torch.nn.Module):
 
     def forward(self, x, edge_index, edge_weight=None, batch_idx=None):
         x = self.atom_encoder(x)
-        edge_weight = self.bond_encoder(edge_weight) + 1 # sum 1  to avoid division by 0
+        # sum 1  to avoid division by 0
+        edge_weight = self.bond_encoder(edge_weight) + 1
         x = self.drop1(x)
         x = self.conv1(x, edge_index, edge_weight).relu()
         x = self.drop2(x)
