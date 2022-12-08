@@ -9,17 +9,21 @@ import wandb
 
 
 @torch.no_grad()
-def eval(model, loader, evaluator):
+def eval(model, loader, evaluator, device=None):
     '''Evaluate the model'''
-    device = model.device
+    
+    if device is None:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    model.to(device)
     model.eval()
     y_true = []
     y_pred = []
 
-    for _, batch in enumerate(tqdm(loader, desc="Iteration")):
+    for _, batch in enumerate(tqdm(loader, desc="Validation")):
         batch = batch.to(device)
 
-        pred = model(batch)
+        pred = model(batch.x, batch.edge_index, batch.edge_attr, batch.batch)
 
         y_true.append(batch.y.view(pred.shape).detach().cpu())
         y_pred.append(pred.detach().cpu())
@@ -35,7 +39,6 @@ def eval(model, loader, evaluator):
 def train(args):
     '''Training loop'''
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    device = 'cpu'
 
     # Download and process data at './dataset/ogbg_molhiv/'
     dataset = PygGraphPropPredDataset(name="ogbg-molhiv", root='dataset/')
@@ -97,8 +100,8 @@ def train(args):
 
         # validate
         print('Validating..')
-        train_metrics = eval(model, train_loader, evaluator)
-        val_metrics = eval(model, valid_loader, evaluator)
+        train_metrics = eval(model, train_loader, evaluator, device)
+        val_metrics = eval(model, valid_loader, evaluator, device)
         print(train_metrics)
         print(val_metrics)
 
@@ -107,10 +110,10 @@ if __name__ == "__main__":
     # Training settings
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', type=int, default=100, help='total epochs')
-    parser.add_argument('--batch_size', type=int, default=8, help='batch size')
+    parser.add_argument('--batch_size', type=int, default=32, help='batch size')
     parser.add_argument('--lr', type=float, default=0.001, help='batch size')
     parser.add_argument('--emb_dim', type=int, default=200,
-                        help='dimensionality of hidden units in GNNs (default: 300)')
+                        help='dimensionality of hidden units in GNNs (default: 200)')
     parser.add_argument('--dw', action=argparse.BooleanOptionalAction,
                         default=False, help='disable wandb, defaults to False')
     parser.add_argument('--run', type=str, help='run name')
@@ -118,7 +121,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     args.run = 'simple-gcn'
-    args.batch_size = 2
+    args.epochs = 1
+    # args.batch_size = 8
     args.dw = True
 
     train(args)
