@@ -18,6 +18,8 @@ def eval(model, loader, evaluator, split=None, device=None):
 
     if device is None:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    desc = 'Evaluation' if split is None else f'Evaluating on {split}'
     if split is None:
         split = ''
     else:
@@ -28,7 +30,8 @@ def eval(model, loader, evaluator, split=None, device=None):
     y_true = []
     y_pred = []
 
-    for _, batch in enumerate(tqdm(loader, desc="Evaluation")):
+
+    for _, batch in enumerate(tqdm(loader, desc=desc)):
         batch = batch.to(device)
 
         pred = model(batch.x, batch.edge_index, batch.edge_attr, batch.batch)
@@ -114,11 +117,14 @@ def train(args):
         print('Validating..')
         train_metrics = eval(model, train_loader, evaluator, 'train', device)
         val_metrics = eval(model, valid_loader, evaluator, 'val', device)
-        print(train_metrics)
-        print(val_metrics)
+        metrics = {
+            'epoch': epoch,
+            **train_metrics,
+            **val_metrics
+        }
 
-        wandb.log(train_metrics)
-        wandb.log(val_metrics)
+        wandb.log(metrics)
+        print(metrics)
 
         outdir = Path('runs', args.run)
         if not outdir.exists():
