@@ -120,10 +120,11 @@ def train(args):
         wandb.log(train_metrics)
         wandb.log(val_metrics)
 
-        if not Path('runs', args.run).exists():
-            os.makedirs(args.run)
+        outdir = Path('runs', args.run)
+        if not outdir.exists():
+            os.makedirs(outdir)
 
-        torch.save(model.state_dict(), Path('runs', args.run, f'{epoch}.pth'))
+        torch.save(model.state_dict(), Path(outdir, f'{epoch}.pth'))
 
 
 if __name__ == "__main__":
