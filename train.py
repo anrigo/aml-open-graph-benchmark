@@ -6,7 +6,7 @@ import torch
 from ogb.graphproppred import PygGraphPropPredDataset, Evaluator
 from torch_geometric.loader import DataLoader
 from tqdm import tqdm
-from models import GCN
+import models
 import wandb
 
 from utils import accuracy
@@ -79,7 +79,7 @@ def train(args):
     # set run name
     wandb.run.name = args.run
 
-    model = GCN(dataset.num_features, args.emb_dim).to(device)
+    model = models.EdgeGCN(dataset.num_features, args.emb_dim).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
