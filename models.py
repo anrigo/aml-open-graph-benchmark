@@ -24,6 +24,8 @@ class GCN(torch.nn.Module):
         x = self.conv1(x, edge_index).relu()
         x = self.drop2(x)
         x = self.conv2(x, edge_index)
+        x = self.drop3(x)
+        x = self.conv3(x, edge_index)
         x = self.readout(x, batch_idx)
         x = self.linear(x)
         x = self.sigmoid(x)
