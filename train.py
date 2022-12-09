@@ -87,6 +87,8 @@ def train(args):
 
     evaluator = Evaluator(name="ogbg-molhiv")
 
+    val_rocauc = torch.zeros(args.epochs+1)
+
     # training loop
     print('Training...')
     for epoch in range(1, args.epochs + 1):
@@ -124,6 +126,7 @@ def train(args):
         }
 
         wandb.log(metrics)
+        val_rocauc[epoch] = metrics['val_rocauc']
         print(metrics)
 
         outdir = Path('runs', args.run)
@@ -131,6 +134,8 @@ def train(args):
             os.makedirs(outdir)
 
         torch.save(model.state_dict(), Path(outdir, f'{epoch}.pth'))
+    
+    print(f'Best val_rocauc: {val_rocauc.max()} at epoch {val_rocauc.argmax()}')
 
 
 if __name__ == "__main__":
