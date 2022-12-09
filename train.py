@@ -136,7 +136,7 @@ def train(args):
 if __name__ == "__main__":
     # Training settings
     parser = argparse.ArgumentParser()
-    parser.add_argument('--epochs', type=int, default=100, help='total epochs')
+    parser.add_argument('--epochs', type=int, default=200, help='total epochs')
     parser.add_argument('--batch_size', type=int,
                         default=64, help='batch size')
     parser.add_argument('--lr', type=float, default=0.001, help='batch size')
