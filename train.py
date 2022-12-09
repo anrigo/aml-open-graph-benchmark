@@ -79,7 +79,7 @@ def train(args):
     # set run name
     wandb.run.name = args.run
 
-    model = models.EdgeGCN(dataset.num_features, args.emb_dim).to(device)
+    model = models.SimpleGCN(dataset.num_features, args.emb_dim).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 

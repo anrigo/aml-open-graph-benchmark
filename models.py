@@ -4,7 +4,7 @@ import torch.nn as nn
 from ogb.graphproppred.mol_encoder import AtomEncoder, BondEncoder
 
 
-class GCN(torch.nn.Module):
+class SimpleGCN(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels):
         super().__init__()
         self.atom_encoder = AtomEncoder(emb_dim=in_channels)
@@ -50,7 +50,8 @@ class EdgeGCN(torch.nn.Module):
     def forward(self, x, edge_index, edge_weight=None, batch_idx=None):
         x = self.atom_encoder(x)
         # project edge features to edge weights > 1
-        edge_weight = self.to_edge_weight(edge_weight.type(torch.float32)).relu() + 1
+        edge_weight = self.to_edge_weight(
+            edge_weight.type(torch.float32)).relu() + 1
         x = self.drop1(x)
         x = self.conv1(x, edge_index, edge_weight).relu()
         x = self.drop2(x)
