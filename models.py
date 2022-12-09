@@ -23,9 +23,9 @@ class GCN(torch.nn.Module):
         x = self.drop1(x)
         x = self.conv1(x, edge_index).relu()
         x = self.drop2(x)
-        x = self.conv2(x, edge_index)
+        x = self.conv2(x, edge_index).relu()
         x = self.drop3(x)
-        x = self.conv3(x, edge_index)
+        x = self.conv3(x, edge_index).relu()
         x = self.readout(x, batch_idx)
         x = self.linear(x)
         x = self.sigmoid(x)
@@ -36,10 +36,7 @@ class EdgeGCN(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels):
         super().__init__()
         self.atom_encoder = AtomEncoder(emb_dim=in_channels)
-        self.to_edge_weight = nn.Sequential(
-            nn.Linear(3, 1),
-            nn.ReLU
-        )
+        self.to_edge_weight = nn.Linear(3, 1)
         self.drop1 = nn.Dropout(p=0.5)
         self.conv1 = GCNConv(in_channels, hidden_channels)
         self.drop2 = nn.Dropout(p=0.5)
@@ -53,13 +50,13 @@ class EdgeGCN(torch.nn.Module):
     def forward(self, x, edge_index, edge_weight=None, batch_idx=None):
         x = self.atom_encoder(x)
         # project edge features to edge weights > 1
-        edge_weight = self.to_edge_weight(edge_weight) + 1
+        edge_weight = self.to_edge_weight(edge_weight.type(torch.float32)).relu() + 1
         x = self.drop1(x)
         x = self.conv1(x, edge_index, edge_weight).relu()
         x = self.drop2(x)
-        x = self.conv2(x, edge_index, edge_weight)
+        x = self.conv2(x, edge_index, edge_weight).relu()
         x = self.drop3(x)
-        x = self.conv3(x, edge_index, edge_weight)
+        x = self.conv3(x, edge_index, edge_weight).relu()
         x = self.readout(x, batch_idx)
         x = self.linear(x)
         x = self.sigmoid(x)
