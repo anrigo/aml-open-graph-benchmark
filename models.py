@@ -23,7 +23,7 @@ class GCN(torch.nn.Module):
         self.linear = nn.Linear(hidden_channels, 1)
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, x: torch.Tensor, edge_index, edge_weight=None, batch_idx=None):
+    def forward(self, x: torch.Tensor, edge_index, edge_feats=None, batch_idx=None):
         x = self.atom_encoder(x)
 
         for l in range(self.num_layers):
@@ -55,7 +55,13 @@ class GINE(torch.nn.Module):
         self.norms = nn.ModuleList()
 
         for _ in range(num_layers):
-            self.convs.append(GINEConv(hidden_channels, hidden_channels))
+            self.convs.append(GINEConv(
+                torch.nn.Sequential(
+                    torch.nn.Linear(hidden_channels, 2*hidden_channels), torch.nn.BatchNorm1d(
+                        2*hidden_channels), torch.nn.ReLU(), torch.nn.Linear(2*hidden_channels, hidden_channels)
+                ),
+                hidden_channels, hidden_channels
+            ))
             self.norms.append(nn.BatchNorm1d(hidden_channels))
             self.drops.append(nn.Dropout(p=0.5))
 
@@ -63,12 +69,13 @@ class GINE(torch.nn.Module):
         self.linear = nn.Linear(hidden_channels, 1)
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, x: torch.Tensor, edge_index, edge_weight=None, batch_idx=None):
+    def forward(self, x: torch.Tensor, edge_index, edge_feats=None, batch_idx=None):
         x = self.atom_encoder(x)
+        edge_feats = self.bond_encoder(edge_feats)
 
         for l in range(self.num_layers):
             res = x.clone()
-            x = self.convs[l](x, edge_index, edge_weight)
+            x = self.convs[l](x, edge_index, edge_feats)
             x = self.norms[l](x)
             # no relu on the last layer
             if l < self.num_layers-1:
