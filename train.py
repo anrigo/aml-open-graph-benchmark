@@ -79,7 +79,7 @@ def train(args):
     # set run name
     wandb.run.name = args.run
 
-    model = models.SimpleGIN(dataset.num_features, args.emb_dim).to(device)
+    model = models.GCN(dataset.num_features, args.emb_dim, args.layers).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
@@ -147,6 +147,8 @@ if __name__ == "__main__":
     parser.add_argument('--lr', type=float, default=0.001, help='batch size')
     parser.add_argument('--emb_dim', type=int, default=300,
                         help='dimensionality of hidden units in GNNs (default: 300)')
+    parser.add_argument('--layers', type=int, default=5,
+                        help='number of GNN layers (default: 5)')
     parser.add_argument('--dw', action=argparse.BooleanOptionalAction,
                         default=False, help='disable wandb, defaults to False')
     parser.add_argument('--run', type=str, help='run name')
