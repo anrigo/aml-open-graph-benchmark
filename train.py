@@ -18,7 +18,7 @@ def eval(model, loader, evaluator, split=None, device=None):
 
     if device is None:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    
+
     desc = 'Evaluation' if split is None else f'Evaluating on {split}'
     if split is None:
         split = ''
@@ -29,7 +29,6 @@ def eval(model, loader, evaluator, split=None, device=None):
     model.eval()
     y_true = []
     y_pred = []
-
 
     for _, batch in enumerate(tqdm(loader, desc=desc)):
         batch = batch.to(device)
@@ -52,7 +51,7 @@ def eval(model, loader, evaluator, split=None, device=None):
 
 def train(args):
     '''Training loop'''
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda' if not args.cpu and torch.cuda.is_available() else 'cpu')
 
     # Download and process data at './dataset/ogbg_molhiv/'
     dataset = PygGraphPropPredDataset(name="ogbg-molhiv", root='dataset/')
@@ -79,7 +78,8 @@ def train(args):
     # set run name
     wandb.run.name = args.run
 
-    model = models.GINE(dataset.num_features, args.emb_dim, args.layers).to(device)
+    model = models.GINE(dataset.num_features, args.emb_dim,
+                        args.layers).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
@@ -135,7 +135,7 @@ def train(args):
                 os.makedirs(outdir)
 
             torch.save(model.state_dict(), Path(outdir, f'{epoch}.pth'))
-    
+
     best = val_rocauc.max()
     wandb.log({'best_val_rocauc': best})
     print(f'Best val_rocauc: {best} at epoch {val_rocauc.argmax()}')
@@ -151,13 +151,15 @@ if __name__ == "__main__":
     parser.add_argument('--emb_dim', type=int, default=300,
                         help='dimensionality of hidden units in GNNs (default: 300)')
     parser.add_argument('--layers', type=int, default=6,
-                        help='number of GNN layers (default: 5)')
+                        help='number of GNN layers (default: 6)')
     parser.add_argument('--dw', action=argparse.BooleanOptionalAction,
                         default=False, help='disable wandb, defaults to False')
     parser.add_argument('--nosave', action=argparse.BooleanOptionalAction,
                         default=False, help='disable checkpoints')
     parser.add_argument('--dry', action=argparse.BooleanOptionalAction,
                         default=False, help='disable checkpoints and wandb logging')
+    parser.add_argument('--cpu', action=argparse.BooleanOptionalAction,
+                        default=False, help='run on cpu only')
     parser.add_argument('--run', type=str, help='run name')
 
     args = parser.parse_args()
