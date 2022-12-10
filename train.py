@@ -129,11 +129,12 @@ def train(args):
         val_rocauc[epoch] = metrics['val_rocauc']
         print(metrics)
 
-        outdir = Path('runs', args.run)
-        if not outdir.exists():
-            os.makedirs(outdir)
+        if not args.nosave:
+            outdir = Path('runs', args.run)
+            if not outdir.exists():
+                os.makedirs(outdir)
 
-        torch.save(model.state_dict(), Path(outdir, f'{epoch}.pth'))
+            torch.save(model.state_dict(), Path(outdir, f'{epoch}.pth'))
     
     print(f'Best val_rocauc: {val_rocauc.max()} at epoch {val_rocauc.argmax()}')
 
@@ -147,10 +148,12 @@ if __name__ == "__main__":
     parser.add_argument('--lr', type=float, default=0.001, help='batch size')
     parser.add_argument('--emb_dim', type=int, default=300,
                         help='dimensionality of hidden units in GNNs (default: 300)')
-    parser.add_argument('--layers', type=int, default=5,
+    parser.add_argument('--layers', type=int, default=6,
                         help='number of GNN layers (default: 5)')
     parser.add_argument('--dw', action=argparse.BooleanOptionalAction,
                         default=False, help='disable wandb, defaults to False')
+    parser.add_argument('--nosave', action=argparse.BooleanOptionalAction,
+                        default=False, help='disable checkpoints')
     parser.add_argument('--run', type=str, help='run name')
 
     args = parser.parse_args()
