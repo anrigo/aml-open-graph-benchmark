@@ -79,7 +79,7 @@ def train(args):
     # set run name
     wandb.run.name = args.run
 
-    model = models.GCN(dataset.num_features, args.emb_dim, args.layers).to(device)
+    model = models.GINE(dataset.num_features, args.emb_dim, args.layers).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
@@ -156,9 +156,15 @@ if __name__ == "__main__":
                         default=False, help='disable wandb, defaults to False')
     parser.add_argument('--nosave', action=argparse.BooleanOptionalAction,
                         default=False, help='disable checkpoints')
+    parser.add_argument('--dry', action=argparse.BooleanOptionalAction,
+                        default=False, help='disable checkpoints and wandb logging')
     parser.add_argument('--run', type=str, help='run name')
 
     args = parser.parse_args()
+
+    if args.dry:
+        args.dw = True
+        args.nosave = True
 
     # args.run = 'simple-gcn'
     # args.epochs = 1
