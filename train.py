@@ -136,7 +136,9 @@ def train(args):
 
             torch.save(model.state_dict(), Path(outdir, f'{epoch}.pth'))
     
-    print(f'Best val_rocauc: {val_rocauc.max()} at epoch {val_rocauc.argmax()}')
+    best = val_rocauc.max()
+    wandb.log({'best_val_rocauc': best})
+    print(f'Best val_rocauc: {best} at epoch {val_rocauc.argmax()}')
 
 
 if __name__ == "__main__":
