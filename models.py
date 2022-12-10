@@ -8,12 +8,30 @@ class SimpleGIN(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels):
         super().__init__()
         self.atom_encoder = AtomEncoder(emb_dim=in_channels)
+        self.mlp1 = torch.nn.Sequential(
+            torch.nn.Linear(in_channels, 2*hidden_channels),
+            torch.nn.BatchNorm1d(2*hidden_channels),
+            torch.nn.ReLU(),
+            torch.nn.Linear(2*hidden_channels, hidden_channels)
+        )
+        self.mlp2 = torch.nn.Sequential(
+            torch.nn.Linear(hidden_channels, 2*hidden_channels),
+            torch.nn.BatchNorm1d(2*hidden_channels),
+            torch.nn.ReLU(),
+            torch.nn.Linear(2*hidden_channels, hidden_channels)
+        )
+        self.mlp3 = torch.nn.Sequential(
+            torch.nn.Linear(hidden_channels, 2*hidden_channels),
+            torch.nn.BatchNorm1d(2*hidden_channels),
+            torch.nn.ReLU(),
+            torch.nn.Linear(2*hidden_channels, hidden_channels)
+        )
         self.drop1 = nn.Dropout(p=0.5)
-        self.conv1 = GINConv(in_channels, hidden_channels)
+        self.conv1 = GINConv(self.mlp1, in_channels, hidden_channels)
         self.drop2 = nn.Dropout(p=0.5)
-        self.conv2 = GINConv(hidden_channels, hidden_channels)
+        self.conv2 = GINConv(self.mlp2, hidden_channels, hidden_channels)
         self.drop3 = nn.Dropout(p=0.5)
-        self.conv3 = GINConv(hidden_channels, hidden_channels)
+        self.conv3 = GINConv(self.mlp3, hidden_channels, hidden_channels)
         self.readout = aggr.MeanAggregation()
         self.linear = nn.Linear(hidden_channels, 1)
         self.sigmoid = nn.Sigmoid()
