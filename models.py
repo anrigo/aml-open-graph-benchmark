@@ -61,7 +61,7 @@ class GCN(torch.nn.Module):
 
 
 class EdgeGCN(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers):
+    def __init__(self, in_channels, hidden_channels, num_layers, attnaggr=False):
         super().__init__()
         self.atom_encoder = AtomEncoder(emb_dim=hidden_channels)
         self.bond_encoder = BondEncoder(emb_dim=hidden_channels)
@@ -84,7 +84,24 @@ class EdgeGCN(torch.nn.Module):
             self.norms.append(nn.BatchNorm1d(hidden_channels))
             self.drops.append(nn.Dropout(p=0.5))
 
-        self.readout = aggr.MeanAggregation()
+        if attnaggr:
+            self.gate_mlp = torch.nn.Sequential(
+                torch.nn.Linear(hidden_channels, 2*hidden_channels),
+                torch.nn.BatchNorm1d(2*hidden_channels),
+                torch.nn.ReLU(),
+                torch.nn.Linear(2*hidden_channels, 1),
+                nn.Tanh()
+            )
+            self.mlp = torch.nn.Sequential(
+                torch.nn.Linear(hidden_channels, 2*hidden_channels),
+                torch.nn.BatchNorm1d(2*hidden_channels),
+                torch.nn.ReLU(),
+                torch.nn.Linear(2*hidden_channels, hidden_channels)
+            )
+            self.readout = aggr.AttentionalAggregation(self.gate_mlp, self.mlp)
+        else:
+            self.readout = aggr.MeanAggregation()
+
         self.linear = nn.Linear(hidden_channels, 1)
         self.sigmoid = nn.Sigmoid()
 
