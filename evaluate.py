@@ -11,7 +11,7 @@ from pandas import DataFrame
 
 
 @torch.no_grad()
-def eval(model, loader, evaluator, split=None, device=None):
+def eval(model, loader, evaluator, split=None, device=None, progress=True):
     '''Evaluate the model'''
 
     if device is None:
@@ -28,7 +28,9 @@ def eval(model, loader, evaluator, split=None, device=None):
     y_true = []
     y_pred = []
 
-    for batch in tqdm(loader, desc=desc, unit='batch'):
+    teval = tqdm(loader, desc=desc, unit='batch') if progress else loader
+
+    for batch in teval:
         batch = batch.to(device)
 
         pred = model(batch.x, batch.edge_index, batch.edge_attr, batch.batch)
@@ -74,21 +76,22 @@ def test(args):
 
     results = {'model': [], 'test_rocauc':[], 'val_rocauc':[]}
 
-    for i, chk in enumerate(checkpoints):
-        print(f'Evaluating {chk} {i+1} / {len(checkpoints)}')
-        model = models.GCN(dataset.num_features, args.emb_dim,
-                        args.layers, attnaggr=False).to(device)
+    with tqdm(checkpoints) as tcheckpoints:
+        for i, chk in enumerate(tcheckpoints):
+            tcheckpoints.set_description(f'Evaluating {chk} {i+1} / {len(tcheckpoints)}')
+            model = models.GCN(dataset.num_features, args.emb_dim,
+                            args.layers, attnaggr=False).to(device)
 
-        state_dict = torch.load(Path(rundir, chk))
-        model.load_state_dict(state_dict)
+            state_dict = torch.load(Path(rundir, chk))
+            model.load_state_dict(state_dict)
 
-        metrics_test = eval(model, test_loader, evaluator, 'test', device)
-        metrics_val = eval(model, valid_loader, evaluator, 'val', device)
-        
-        # append results
-        results['model'].append(chk)
-        results['test_rocauc'].append(metrics_test['test_rocauc'])
-        results['val_rocauc'].append(metrics_val['val_rocauc'])
+            metrics_test = eval(model, test_loader, evaluator, 'test', device, progress=False)
+            metrics_val = eval(model, valid_loader, evaluator, 'val', device, progress=False)
+            
+            # append results
+            results['model'].append(chk)
+            results['test_rocauc'].append(metrics_test['test_rocauc'])
+            results['val_rocauc'].append(metrics_val['val_rocauc'])
 
     # highlight best model
     max_idx = results['test_rocauc'].index(max(results['test_rocauc']))
