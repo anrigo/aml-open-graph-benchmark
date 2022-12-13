@@ -41,7 +41,7 @@ def train(args):
     wandb.run.name = args.run
 
     model = models.SAGE(dataset.num_features, args.emb_dim,
-                           args.layers, attnaggr=True).to(device)
+                           args.layers, attnaggr=True, shareattn=False).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
