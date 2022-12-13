@@ -2,11 +2,12 @@ import argparse
 import os
 from pathlib import Path
 import torch
-from tqdm import tqdm
-from utils import accuracy
 from ogb.graphproppred import PygGraphPropPredDataset, Evaluator
 from torch_geometric.loader import DataLoader
+from tqdm import tqdm
 import models
+from utils import accuracy
+from pandas import DataFrame
 
 
 @torch.no_grad()
@@ -27,7 +28,7 @@ def eval(model, loader, evaluator, split=None, device=None):
     y_true = []
     y_pred = []
 
-    for _, batch in enumerate(tqdm(loader, desc=desc)):
+    for batch in tqdm(loader, desc=desc, unit='batch'):
         batch = batch.to(device)
 
         pred = model(batch.x, batch.edge_index, batch.edge_attr, batch.batch)
@@ -51,12 +52,12 @@ def test(args):
 
     if not rundir.exists():
         raise FileNotFoundError('Run folder not found')
-    
+
     checkpoints = [file_ for file_ in os.listdir(rundir) if '.pth' in file_]
 
     if len(checkpoints) == 0:
         raise FileNotFoundError('No checkpoint found')
-    
+
     device = torch.device(
         'cuda' if not args.cpu and torch.cuda.is_available() else 'cpu')
 
@@ -64,20 +65,47 @@ def test(args):
     dataset = PygGraphPropPredDataset(name="ogbg-molhiv", root='dataset/')
 
     split_idx = dataset.get_idx_split()
-    test_loader = DataLoader(dataset[split_idx["test"]], batch_size=args.batch_size, shuffle=False)
-    
+    valid_loader = DataLoader(
+        dataset[split_idx["valid"]], batch_size=args.batch_size, shuffle=False)
+    test_loader = DataLoader(
+        dataset[split_idx["test"]], batch_size=args.batch_size, shuffle=False)
+
     evaluator = Evaluator(name="ogbg-molhiv")
 
-    for chk in checkpoints:
-        print(f'Evaluating {chk}')
+    results = {'model': [], 'test_rocauc':[], 'val_rocauc':[]}
+
+    for i, chk in enumerate(checkpoints):
+        print(f'Evaluating {chk} {i+1} / {len(checkpoints)}')
         model = models.GCN(dataset.num_features, args.emb_dim,
-                           args.layers, attnaggr=False).to(device)
+                        args.layers, attnaggr=False).to(device)
 
         state_dict = torch.load(Path(rundir, chk))
         model.load_state_dict(state_dict)
 
-        metrics = eval(model, test_loader, evaluator, 'test', device)
-        print(metrics)
+        metrics_test = eval(model, test_loader, evaluator, 'test', device)
+        metrics_val = eval(model, valid_loader, evaluator, 'val', device)
+        
+        # append results
+        results['model'].append(chk)
+        results['test_rocauc'].append(metrics_test['test_rocauc'])
+        results['val_rocauc'].append(metrics_val['val_rocauc'])
+
+    # highlight best model
+    max_idx = results['test_rocauc'].index(max(results['test_rocauc']))
+    results['model'][max_idx] = f"**{results['model'][max_idx]}**"
+    results['test_rocauc'][max_idx] = f"**{results['test_rocauc'][max_idx]}**"
+
+    # to markdown
+    str_res = DataFrame.from_dict(results).to_markdown(index=False)
+
+    # save results table
+    savepath = Path(rundir, 'results.md')
+    print(f'Saving to {savepath}')
+    with open(savepath, 'w') as f:
+        print(f'\nResults for: {args.run}')
+        print(str_res)
+        f.write(f'Results for: {args.run}\n')
+        f.write(str_res)
 
 
 if __name__ == '__main__':

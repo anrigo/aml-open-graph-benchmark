@@ -57,7 +57,7 @@ def train(args):
         with tqdm(train_loader, unit='batch') as tepoch:
             tepoch.set_description(f'Epoch {epoch} / {args.epochs}')
 
-            for _, batch in enumerate(tepoch):
+            for batch in tepoch:
                 batch.to(device)
                 model.train()
                 optimizer.zero_grad()
