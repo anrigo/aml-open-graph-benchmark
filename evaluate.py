@@ -109,9 +109,9 @@ def test(args):
     savepath = Path('runs', args.run, 'results.md')
     print(f'Saving to {savepath}')
     with open(savepath, 'w') as f:
-        print(f'\nResults for: {args.run}')
+        print(f'\nResults for: {args.run}\n')
         print(str_res)
-        f.write(f'Results for: {args.run}\n')
+        f.write(f'Results for: {args.run}\n\n')
         f.write(str_res)
 
 
