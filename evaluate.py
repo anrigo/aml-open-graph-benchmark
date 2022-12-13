@@ -74,20 +74,23 @@ def test(args):
 
     evaluator = Evaluator(name="ogbg-molhiv")
 
-    results = {'model': [], 'test_rocauc':[], 'val_rocauc':[]}
+    results = {'model': [], 'test_rocauc': [], 'val_rocauc': []}
 
     with tqdm(checkpoints) as tcheckpoints:
         for i, chk in enumerate(tcheckpoints):
-            tcheckpoints.set_description(f'Evaluating {chk} {i+1} / {len(tcheckpoints)}')
+            tcheckpoints.set_description(
+                f'Evaluating {chk} {i+1} / {len(tcheckpoints)}')
             model = models.GCN(dataset.num_features, args.emb_dim,
-                            args.layers, attnaggr=False).to(device)
+                               args.layers, attnaggr=False).to(device)
 
             state_dict = torch.load(Path(rundir, chk))
             model.load_state_dict(state_dict)
 
-            metrics_test = eval(model, test_loader, evaluator, 'test', device, progress=False)
-            metrics_val = eval(model, valid_loader, evaluator, 'val', device, progress=False)
-            
+            metrics_test = eval(model, test_loader, evaluator,
+                                'test', device, progress=False)
+            metrics_val = eval(model, valid_loader, evaluator,
+                               'val', device, progress=False)
+
             # append results
             results['model'].append(chk)
             results['test_rocauc'].append(metrics_test['test_rocauc'])
