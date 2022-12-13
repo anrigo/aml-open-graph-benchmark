@@ -15,7 +15,6 @@ class SAGE(torch.nn.Module):
         self.norms = nn.ModuleList()
 
         for _ in range(num_layers):
-            self.convs.append(SAGEConv(hidden_channels, hidden_channels, aggr='mean'))
             self.norms.append(nn.BatchNorm1d(hidden_channels))
             self.drops.append(nn.Dropout(p=0.5))
 
@@ -33,8 +32,14 @@ class SAGE(torch.nn.Module):
                 torch.nn.ReLU(),
                 torch.nn.Linear(2*hidden_channels, hidden_channels)
             )
+            for _ in range(num_layers):
+                self.convs.append(SAGEConv(hidden_channels, hidden_channels,
+                                  aggr=aggr.AttentionalAggregation(self.gate_mlp, self.mlp)))
             self.readout = aggr.AttentionalAggregation(self.gate_mlp, self.mlp)
         else:
+            for _ in range(num_layers):
+                self.convs.append(
+                    SAGEConv(hidden_channels, hidden_channels, aggr='mean'))
             self.readout = aggr.MeanAggregation()
 
         self.linear = nn.Linear(hidden_channels, 1)
