@@ -92,7 +92,7 @@ def train(args):
         print(metrics)
 
         if not args.nosave:
-            outdir = Path('runs', args.run)
+            outdir = Path('runs', args.run, 'checkpoints')
             if not outdir.exists():
                 os.makedirs(outdir)
 

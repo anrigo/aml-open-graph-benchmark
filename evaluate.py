@@ -50,7 +50,7 @@ def eval(model, loader, evaluator, split=None, device=None, progress=True):
 
 
 def test(args):
-    rundir = Path('runs', args.run)
+    rundir = Path('runs', args.run, 'checkpoints')
 
     if not rundir.exists():
         raise FileNotFoundError('Run folder not found')
@@ -93,16 +93,20 @@ def test(args):
             results['test_rocauc'].append(metrics_test['test_rocauc'])
             results['val_rocauc'].append(metrics_val['val_rocauc'])
 
-    # highlight best model
+    # highlight best models
     max_idx = results['test_rocauc'].index(max(results['test_rocauc']))
     results['model'][max_idx] = f"**{results['model'][max_idx]}**"
     results['test_rocauc'][max_idx] = f"**{results['test_rocauc'][max_idx]}**"
+
+    max_idx = results['val_rocauc'].index(max(results['val_rocauc']))
+    results['model'][max_idx] = f"**{results['model'][max_idx]}**"
+    results['val_rocauc'][max_idx] = f"**{results['val_rocauc'][max_idx]}**"
 
     # to markdown
     str_res = DataFrame.from_dict(results).to_markdown(index=False)
 
     # save results table
-    savepath = Path(rundir, 'results.md')
+    savepath = Path('runs', args.run, 'results.md')
     print(f'Saving to {savepath}')
     with open(savepath, 'w') as f:
         print(f'\nResults for: {args.run}')
