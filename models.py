@@ -8,6 +8,7 @@ class GAT(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels, num_layers, attnaggr=False):
         super().__init__()
         self.atom_encoder = AtomEncoder(emb_dim=hidden_channels)
+        self.bond_encoder = BondEncoder(emb_dim=hidden_channels)
 
         self.num_layers = num_layers
         self.drops = nn.ModuleList()
@@ -15,7 +16,8 @@ class GAT(torch.nn.Module):
         self.norms = nn.ModuleList()
 
         for _ in range(num_layers):
-            self.convs.append(GATv2Conv(hidden_channels, hidden_channels))
+            self.convs.append(
+                GATv2Conv(hidden_channels, hidden_channels, edge_dim=hidden_channels))
             self.norms.append(nn.BatchNorm1d(hidden_channels))
             self.drops.append(nn.Dropout(p=0.5))
 
@@ -45,7 +47,8 @@ class GAT(torch.nn.Module):
 
         for l in range(self.num_layers):
             res = x.clone()
-            x = self.convs[l](x, edge_index)
+            x = self.convs[l](
+                x, edge_index, edge_attr=self.bond_encoder(edge_feats))
             x = self.norms[l](x)
             # no relu on the last layer
             if l < self.num_layers-1:
