@@ -80,8 +80,8 @@ def test(args):
         for i, chk in enumerate(tcheckpoints):
             tcheckpoints.set_description(
                 f'Evaluating {chk} {i+1} / {len(tcheckpoints)}')
-            model = models.GCN(dataset.num_features, args.emb_dim,
-                               args.layers, attnaggr=False).to(device)
+            model = models.SAGE(dataset.num_features, args.emb_dim,
+                               args.layers, aggrtype='attn', readout='attn').to(device)
 
             state_dict = torch.load(Path(rundir, chk))
             model.load_state_dict(state_dict)
