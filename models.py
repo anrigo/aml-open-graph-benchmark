@@ -5,7 +5,7 @@ from ogb.graphproppred.mol_encoder import AtomEncoder, BondEncoder
 
 
 class SAGE(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers, attnaggr=False, shareattn=True):
+    def __init__(self, in_channels, hidden_channels, num_layers, attnaggr=False):
         super().__init__()
         self.atom_encoder = AtomEncoder(emb_dim=hidden_channels)
 
@@ -33,25 +33,21 @@ class SAGE(torch.nn.Module):
                 torch.nn.Linear(2*hidden_channels, hidden_channels)
             )
             for _ in range(num_layers):
-                if shareattn:
-                    self.convs.append(SAGEConv(hidden_channels, hidden_channels,
-                                               aggr=aggr.AttentionalAggregation(self.gate_mlp, self.mlp)))
-                else:
-                    attn_gate_mlp = torch.nn.Sequential(
-                        torch.nn.Linear(hidden_channels, 2*hidden_channels),
-                        torch.nn.BatchNorm1d(2*hidden_channels),
-                        torch.nn.ReLU(),
-                        torch.nn.Linear(2*hidden_channels, 1),
-                        nn.Tanh()
-                    )
-                    attn_mlp = torch.nn.Sequential(
-                        torch.nn.Linear(hidden_channels, 2*hidden_channels),
-                        torch.nn.BatchNorm1d(2*hidden_channels),
-                        torch.nn.ReLU(),
-                        torch.nn.Linear(2*hidden_channels, hidden_channels)
-                    )
-                    self.convs.append(SAGEConv(hidden_channels, hidden_channels,
-                                               aggr=aggr.AttentionalAggregation(attn_gate_mlp, attn_mlp)))
+                attn_gate_mlp = torch.nn.Sequential(
+                    torch.nn.Linear(hidden_channels, 2*hidden_channels),
+                    torch.nn.BatchNorm1d(2*hidden_channels),
+                    torch.nn.ReLU(),
+                    torch.nn.Linear(2*hidden_channels, 1),
+                    nn.Tanh()
+                )
+                attn_mlp = torch.nn.Sequential(
+                    torch.nn.Linear(hidden_channels, 2*hidden_channels),
+                    torch.nn.BatchNorm1d(2*hidden_channels),
+                    torch.nn.ReLU(),
+                    torch.nn.Linear(2*hidden_channels, hidden_channels)
+                )
+                self.convs.append(SAGEConv(hidden_channels, hidden_channels,
+                                            aggr=aggr.AttentionalAggregation(attn_gate_mlp, attn_mlp)))
 
             self.readout = aggr.AttentionalAggregation(self.gate_mlp, self.mlp)
         else:
