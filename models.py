@@ -116,6 +116,8 @@ class SAGE(torch.nn.Module):
             self.readout = aggr.AttentionalAggregation(self.gate_mlp, self.mlp)
         elif readout == 'mean':
             self.readout = aggr.MeanAggregation()
+        elif self.readout == 'max':
+            self.readout = aggr.MaxAggregation()
 
         self.linear = nn.Linear(hidden_channels, 1)
         self.sigmoid = nn.Sigmoid()
