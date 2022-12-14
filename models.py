@@ -64,7 +64,7 @@ class GAT(torch.nn.Module):
 
 
 class SAGE(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers, attnaggr=False):
+    def __init__(self, in_channels, hidden_channels, num_layers, aggrtype='mean', readout='mean'):
         super().__init__()
         self.atom_encoder = AtomEncoder(emb_dim=hidden_channels)
 
@@ -77,21 +77,8 @@ class SAGE(torch.nn.Module):
             self.norms.append(nn.BatchNorm1d(hidden_channels))
             self.drops.append(nn.Dropout(p=0.5))
 
-        if attnaggr:
-            self.gate_mlp = torch.nn.Sequential(
-                torch.nn.Linear(hidden_channels, 2*hidden_channels),
-                torch.nn.BatchNorm1d(2*hidden_channels),
-                torch.nn.ReLU(),
-                torch.nn.Linear(2*hidden_channels, 1),
-                nn.Tanh()
-            )
-            self.mlp = torch.nn.Sequential(
-                torch.nn.Linear(hidden_channels, 2*hidden_channels),
-                torch.nn.BatchNorm1d(2*hidden_channels),
-                torch.nn.ReLU(),
-                torch.nn.Linear(2*hidden_channels, hidden_channels)
-            )
-            for _ in range(num_layers):
+            # sage aggregation
+            if aggrtype == 'attn':
                 attn_gate_mlp = torch.nn.Sequential(
                     torch.nn.Linear(hidden_channels, 2*hidden_channels),
                     torch.nn.BatchNorm1d(2*hidden_channels),
@@ -107,12 +94,27 @@ class SAGE(torch.nn.Module):
                 )
                 self.convs.append(SAGEConv(hidden_channels, hidden_channels,
                                            aggr=aggr.AttentionalAggregation(attn_gate_mlp, attn_mlp)))
-
-            self.readout = aggr.AttentionalAggregation(self.gate_mlp, self.mlp)
-        else:
-            for _ in range(num_layers):
+            else:
                 self.convs.append(
-                    SAGEConv(hidden_channels, hidden_channels, aggr='mean'))
+                    SAGEConv(hidden_channels, hidden_channels, aggr=aggrtype))
+
+        # readout
+        if readout == 'attn':
+            self.gate_mlp = torch.nn.Sequential(
+                torch.nn.Linear(hidden_channels, 2*hidden_channels),
+                torch.nn.BatchNorm1d(2*hidden_channels),
+                torch.nn.ReLU(),
+                torch.nn.Linear(2*hidden_channels, 1),
+                nn.Tanh()
+            )
+            self.mlp = torch.nn.Sequential(
+                torch.nn.Linear(hidden_channels, 2*hidden_channels),
+                torch.nn.BatchNorm1d(2*hidden_channels),
+                torch.nn.ReLU(),
+                torch.nn.Linear(2*hidden_channels, hidden_channels)
+            )
+            self.readout = aggr.AttentionalAggregation(self.gate_mlp, self.mlp)
+        elif readout == 'mean':
             self.readout = aggr.MeanAggregation()
 
         self.linear = nn.Linear(hidden_channels, 1)
