@@ -40,8 +40,8 @@ def train(args):
     # set run name
     wandb.run.name = args.run
 
-    model = models.GAT(dataset.num_features, args.emb_dim,
-                           args.layers, heads=args.heads).to(device)
+    model = models.DiffPool(dataset.num_features, args.emb_dim,
+                           args.layers).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
@@ -128,7 +128,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.dry:
+    if True or args.dry:
         args.dw = True
         args.nosave = True
 
