@@ -41,7 +41,7 @@ def train(args):
     wandb.run.name = args.run
 
     model = models.DiffPool(dataset.num_features, args.emb_dim,
-                           args.layers).to(device)
+                            args.layers).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
@@ -62,10 +62,26 @@ def train(args):
                 model.train()
                 optimizer.zero_grad()
 
-                out = model(batch.x, batch.edge_index,
-                            batch.edge_attr, batch.batch)
+                if isinstance(model, models.DiffPool):
+                    out, link_loss, assign_loss = model(batch.x, batch.edge_index,
+                                                            batch.edge_attr, batch.batch)
 
-                loss = criterion(out, batch.y.type(torch.float32))
+                    link_loss, assign_loss = link_loss.sum(), assign_loss.sum()
+
+                    loss = criterion(out, batch.y.type(
+                        torch.float32)) + link_loss + assign_loss
+
+                    wandb.log({
+                        'link_loss': link_loss.item(),
+                        'assign_loss': assign_loss.item()
+                    }, commit=False)
+
+                else:
+                    out = model(batch.x, batch.edge_index,
+                                batch.edge_attr, batch.batch)
+
+                    loss = criterion(out, batch.y.type(torch.float32))
+
                 loss.backward()
                 optimizer.step()
 
@@ -128,7 +144,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if True or args.dry:
+    if args.dry:
         args.dw = True
         args.nosave = True
 

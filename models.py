@@ -108,6 +108,9 @@ class DiffPool(torch.nn.Module):
     def forward(self, x: torch.Tensor, edge_index, edge_feats=None, batch_idx=None):
         x = self.atom_encoder(x)
 
+        link_losses = []
+        assignments_losses = []
+
         pool_idx = 0
         for l in range(self.num_layers + self.num_pool):
             # None is a place holder in the layer list
@@ -131,6 +134,10 @@ class DiffPool(torch.nn.Module):
 
                 x, edge_index, batch_idx, link_pred_loss, entropy = self.apply_diffpool(
                     x, edge_index, s, batch_idx)
+
+                link_losses.append(link_pred_loss)
+                assignments_losses.append(entropy)
+
                 pool_idx += 1
 
         if isinstance(self.readout, nn.ModuleList):
@@ -139,13 +146,15 @@ class DiffPool(torch.nn.Module):
                 s = conv(x, edge_index)
             x, edge_index, batch_idx, link_pred_loss, entropy = self.apply_diffpool(
                 x, edge_index, s, batch_idx)
+            link_losses.append(link_pred_loss)
+            assignments_losses.append(entropy)
         else:
             # aggregation pooling
             x = self.readout(x, batch_idx)
 
         x = self.linear(x)
         x = self.sigmoid(x)
-        return x
+        return x, torch.Tensor(link_losses).to(x.device), torch.Tensor(assignments_losses).to(x.device)
 
 
 class GAT(torch.nn.Module):
