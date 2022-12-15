@@ -40,8 +40,8 @@ def train(args):
     # set run name
     wandb.run.name = args.run
 
-    model = models.SAGE(dataset.num_features, args.emb_dim,
-                           args.layers, aggrtype='attn', readout='max').to(device)
+    model = models.GAT(dataset.num_features, args.emb_dim,
+                           args.layers, heads=args.heads).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
@@ -114,6 +114,8 @@ if __name__ == "__main__":
                         help='dimensionality of hidden units in GNNs (default: 300)')
     parser.add_argument('--layers', type=int, default=6,
                         help='number of GNN layers (default: 6)')
+    parser.add_argument('--heads', type=int, default=0,
+                        help='number of GAT attention heads, if GAT is used (default: 0)')
     parser.add_argument('--dw', action=argparse.BooleanOptionalAction,
                         default=False, help='disable wandb, defaults to False')
     parser.add_argument('--nosave', action=argparse.BooleanOptionalAction,

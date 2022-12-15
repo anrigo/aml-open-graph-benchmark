@@ -17,7 +17,7 @@ class GAT(torch.nn.Module):
 
         for _ in range(num_layers):
             self.convs.append(
-                GATv2Conv(hidden_channels, hidden_channels, edge_dim=hidden_channels, heads=heads))
+                GATv2Conv(hidden_channels, hidden_channels // heads, edge_dim=hidden_channels, heads=heads))
             self.norms.append(nn.BatchNorm1d(hidden_channels))
             self.drops.append(nn.Dropout(p=0.5))
 
