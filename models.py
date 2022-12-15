@@ -77,11 +77,10 @@ class DiffPool(torch.nn.Module):
             # perform a final diffpool with a single cluster
             pooling_aggr = build_attentional_aggr(
                 hidden_channels) if aggrpool == 'attn' else aggrpool
-            self.readout = nn.ModuleList(
-                self.convs.append(
-                    SAGEConv(hidden_channels, hidden_channels, aggr=pooling_aggr)),
+            self.readout = nn.ModuleList([
+                SAGEConv(hidden_channels, hidden_channels, aggr=pooling_aggr),
                 SAGEConv(hidden_channels, 1, aggr=pooling_aggr)
-            )
+            ])
         elif readout == 'mean':
             self.readout = aggr.MeanAggregation()
         elif readout == 'max':
@@ -89,20 +88,21 @@ class DiffPool(torch.nn.Module):
 
         self.linear = nn.Linear(hidden_channels, 1)
         self.sigmoid = nn.Sigmoid()
-    
-    def apply_diffpool(self, x, edge_index, batch_idx):
+
+    def apply_diffpool(self, x, edge_index, s, batch_idx):
         # convert sparse batch representation to tradional dense batch
         x, _ = pygu.to_dense_batch(x, batch_idx)
         s, _ = pygu.to_dense_batch(s, batch_idx)
         edge_index = pygu.to_dense_adj(edge_index, batch_idx)
 
         # apply diffpool
-        x, edge_index, link_pred_loss, entropy = dense_diff_pool(x, edge_index, s)
-        
+        x, edge_index, link_pred_loss, entropy = dense_diff_pool(
+            x, edge_index, s)
+
         # revert to sparse batching
         sparse_batch = Batch.from_data_list(
             [Data(x=x[b], edge_index=pygu.dense_to_sparse(edge_index[b])) for b in range(x.shape[0])])
-        
+
         return sparse_batch.x, sparse_batch.edge_index[0], sparse_batch.batch, link_pred_loss, entropy
 
     def forward(self, x: torch.Tensor, edge_index, edge_feats=None, batch_idx=None):
@@ -129,15 +129,16 @@ class DiffPool(torch.nn.Module):
                 s = self.poolconv[pool_idx](x, edge_index)
                 s = self.convassign[pool_idx](x, edge_index)
 
-                
-                x, edge_index, batch_idx, link_pred_loss, entropy = self.apply_diffpool(x, edge_index, batch_idx)
+                x, edge_index, batch_idx, link_pred_loss, entropy = self.apply_diffpool(
+                    x, edge_index, s, batch_idx)
                 pool_idx += 1
 
         if isinstance(self.readout, nn.ModuleList):
             # pooling readout
             for conv in self.readout:
-                x = conv(x, edge_index)
-            x, edge_index, batch_idx, link_pred_loss, entropy = self.apply_diffpool(x, edge_index, batch_idx)
+                s = conv(x, edge_index)
+            x, edge_index, batch_idx, link_pred_loss, entropy = self.apply_diffpool(
+                x, edge_index, s, batch_idx)
         else:
             # aggregation pooling
             x = self.readout(x, batch_idx)
