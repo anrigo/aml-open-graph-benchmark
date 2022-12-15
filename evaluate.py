@@ -33,7 +33,10 @@ def eval(model, loader, evaluator, split=None, device=None, progress=True):
     for batch in teval:
         batch = batch.to(device)
 
-        pred = model(batch.x, batch.edge_index, batch.edge_attr, batch.batch)
+        if isinstance(model, models.DiffPool):
+            pred, *_ = model(batch.x, batch.edge_index, batch.edge_attr, batch.batch)
+        else:
+            pred = model(batch.x, batch.edge_index, batch.edge_attr, batch.batch)
 
         y_true.append(batch.y.view(pred.shape).detach().cpu())
         y_pred.append(pred.detach().cpu())
