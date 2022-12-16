@@ -140,17 +140,12 @@ if __name__ == "__main__":
                         default=False, help='disable checkpoints and wandb logging')
     parser.add_argument('--cpu', action=argparse.BooleanOptionalAction,
                         default=False, help='run on cpu only')
-    parser.add_argument('--run', type=str, help='run name')
+    parser.add_argument('--run', type=str, default='gnn', help='run name')
 
     args = parser.parse_args()
 
     if args.dry:
         args.dw = True
         args.nosave = True
-
-    # args.run = 'simple-gcn'
-    # args.epochs = 1
-    # args.batch_size = 6
-    # args.dw = True
 
     train(args)
