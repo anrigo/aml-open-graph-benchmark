@@ -41,7 +41,7 @@ def train(args):
     wandb.run.name = args.run
 
     model = models.DiffPool(dataset.num_features, args.emb_dim,
-                            args.layers, aggrtype='attn', aggrpool='attn', readout='pool').to(device)
+                            args.layers, aggrtype='max', aggrpool='max', readout='attn').to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
