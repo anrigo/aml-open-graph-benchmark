@@ -10,6 +10,10 @@ import wandb
 from evaluate import eval
 
 
+def grid_search(args):
+    architectures = []
+
+
 def train(args, model=None, prefix=None):
     '''Training loop'''
     device = torch.device(
@@ -64,7 +68,7 @@ def train(args, model=None, prefix=None):
 
                 if isinstance(model, models.DiffPool):
                     out, link_loss, assign_loss = model(batch.x, batch.edge_index,
-                                                            batch.edge_attr, batch.batch)
+                                                        batch.edge_attr, batch.batch)
 
                     link_loss, assign_loss = link_loss.sum(), assign_loss.sum()
 
@@ -147,10 +151,20 @@ if __name__ == "__main__":
                         default=False, help='run on cpu only')
     parser.add_argument('--run', type=str, default='gnn', help='run name')
 
+    parser.add_argument('--tune', action=argparse.BooleanOptionalAction,
+                        default=False, help='if True a grid search for hyperparameters tuning will run instead of normal training')
+
     args = parser.parse_args()
+
+    if args.tune:
+        args.dry
+        args.dw = True
+        args.nosave = True
+
+        grid_search(args)
 
     if args.dry:
         args.dw = True
         args.nosave = True
 
-    train(args)
+    _ = train(args)
