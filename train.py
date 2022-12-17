@@ -11,7 +11,20 @@ from evaluate import eval
 
 
 def grid_search(args):
-    architectures = []
+    dataset = PygGraphPropPredDataset(name="ogbg-molhiv", root='dataset/')
+
+    learning_rates = [0.001, 0.01]
+    batch_sizes = [32, 64, 128]
+    num_layers = [6, 8, 10]
+    hidden_dims = [128, 300, 512]
+
+    for lr in learning_rates:
+        for bs in batch_sizes:
+            for layers in num_layers:
+                for h in hidden_dims:
+                    model = models.DiffPool(dataset.num_features, h, layers, reduce_to=0.75, aggrtype='max', aggrpool='max', readout='attn')
+                    args.lr = lr
+                    args.batch_size = bs
 
 
 def train(args, model=None, prefix=None):
@@ -46,6 +59,8 @@ def train(args, model=None, prefix=None):
     if model is None:
         model = models.DiffPool(dataset.num_features, args.emb_dim,
                                 args.layers, aggrtype='max', aggrpool='max', readout='attn').to(device)
+    else:
+        model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
