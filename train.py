@@ -10,7 +10,7 @@ import wandb
 from evaluate import eval
 
 
-def train(args):
+def train(args, model=None, prefix=None):
     '''Training loop'''
     device = torch.device(
         'cuda' if not args.cpu and torch.cuda.is_available() else 'cpu')
@@ -23,7 +23,6 @@ def train(args):
         dataset[split_idx["train"]], batch_size=args.batch_size, shuffle=True)
     valid_loader = DataLoader(
         dataset[split_idx["valid"]], batch_size=args.batch_size, shuffle=False)
-    # test_loader = DataLoader(dataset[split_idx["test"]], batch_size=32, shuffle=False)
 
     # log config
     wandb.init(
@@ -40,8 +39,9 @@ def train(args):
     # set run name
     wandb.run.name = args.run
 
-    model = models.DiffPool(dataset.num_features, args.emb_dim,
-                            args.layers, aggrtype='max', aggrpool='max', readout='attn').to(device)
+    if model is None:
+        model = models.DiffPool(dataset.num_features, args.emb_dim,
+                                args.layers, aggrtype='max', aggrpool='max', readout='attn').to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
@@ -109,14 +109,19 @@ def train(args):
 
         if not args.nosave:
             outdir = Path('runs', args.run, 'checkpoints')
+            if prefix is not None:
+                outdir = Path(prefix, outdir)
             if not outdir.exists():
                 os.makedirs(outdir)
 
             torch.save(model.state_dict(), Path(outdir, f'{epoch}.pth'))
 
-    best = val_rocauc.max()
-    wandb.log({'best_val_rocauc': best})
-    print(f'Best val_rocauc: {best} at epoch {val_rocauc.argmax()}')
+    best_val = val_rocauc.max()
+    best_ep = val_rocauc.argmax()
+    wandb.log({'best_val_rocauc': best_val})
+    print(f'Best val_rocauc: {best_val} at epoch {best_ep}')
+
+    return best_val, best_ep
 
 
 if __name__ == "__main__":
