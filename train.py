@@ -8,6 +8,7 @@ from tqdm import tqdm
 import models
 import wandb
 from evaluate import eval
+from pandas import DataFrame
 
 
 def grid_search(args):
@@ -17,21 +18,67 @@ def grid_search(args):
     batch_sizes = [64]
     num_layers = [6, 8, 10]
     hidden_dims = [300]
+    epochs = [200]
 
-    reduction = {
+    reduce_to = {
         6: 0.25,
         8: 0.40,
         10: 0.50
     }
 
+    args.dry = True
+    args.dw = True
+    # set to false to save each model checkpoints during the search
+    args.nosave = True
+
+    results = {'layers': [], 'bs': [],
+               'hidden_dim': [], 'lr': [], 'reduce_to': [], 'val_rocauc': []}
+
     for lr in learning_rates:
         for bs in batch_sizes:
             for layers in num_layers:
                 for h in hidden_dims:
-                    model = models.DiffPool(
-                        dataset.num_features, h, layers, reduce_to=0.75, aggrtype='max', aggrpool='max', readout='attn')
-                    args.lr = lr
-                    args.batch_size = bs
+                    for e in epochs:
+                        config = f'{args.run}, layers: {layers}, bs: {bs}, hidden_dim: {h}, epochs: {e} lr: {lr}, reduce_to: {reduce_to[layers]}'
+
+                        print('Training ' + config)
+
+                        model = models.DiffPool(
+                            dataset.num_features, h, layers, reduce_to=reduce_to[layers], aggrtype='max', aggrpool='max', readout='attn')
+                        args.lr = lr
+                        args.batch_size = bs
+                        args.epochs = e
+
+                        best_val, _ = train(args, model, 'tune')
+
+                        results['layers'].append(layers)
+                        results['bs'].append(bs)
+                        results['hidden_dim'].append(h)
+                        results['epochs'].append(e)
+                        results['lr'].append(lr)
+                        results['reduce_to'].append(reduce_to[layers])
+                        results['val_rocauc'].append(best_val)
+
+                        print('Results ' + config +
+                              f', val_rocauc: {best_val}')
+
+    # highlight the best configuration for the model
+    max_idx = results['val_rocauc'].index(max(results['val_rocauc']))
+
+    for k in results.keys():
+        results[k][max_idx] = f"**{results[k][max_idx]}**"
+
+    # to markdown
+    str_res = DataFrame.from_dict(results).to_markdown(index=False)
+
+    # save results table
+    savepath = Path('runs', f'{args.run}-tuning.md')
+    print(f'Saving to {savepath}')
+    with open(savepath, 'w') as f:
+        print(f'\nResults for: {args.run}\n')
+        print(str_res)
+        f.write(f'Results for: {args.run}\n\n')
+        f.write(str_res)
 
 
 def train(args, model=None, prefix=None):
@@ -65,7 +112,7 @@ def train(args, model=None, prefix=None):
 
     if model is None:
         model = models.DiffPool(dataset.num_features, args.emb_dim,
-                                args.layers, aggrtype='max', aggrpool='max', readout='attn', reduce_to=0.50).to(device)
+                                args.layers, aggrtype='max', aggrpool='max', readout='attn').to(device)
     else:
         model.to(device)
 
@@ -179,10 +226,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.tune:
-        args.dry
-        args.dw = True
-        args.nosave = True
-
         grid_search(args)
     else:
         if args.dry:
