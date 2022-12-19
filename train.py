@@ -13,16 +13,23 @@ from evaluate import eval
 def grid_search(args):
     dataset = PygGraphPropPredDataset(name="ogbg-molhiv", root='dataset/')
 
-    learning_rates = [0.001, 0.01]
-    batch_sizes = [32, 64, 128]
+    learning_rates = [0.001]
+    batch_sizes = [64]
     num_layers = [6, 8, 10]
-    hidden_dims = [128, 300, 512]
+    hidden_dims = [300]
+
+    reduction = {
+        6: 0.25,
+        8: 0.40,
+        10: 0.50
+    }
 
     for lr in learning_rates:
         for bs in batch_sizes:
             for layers in num_layers:
                 for h in hidden_dims:
-                    model = models.DiffPool(dataset.num_features, h, layers, reduce_to=0.75, aggrtype='max', aggrpool='max', readout='attn')
+                    model = models.DiffPool(
+                        dataset.num_features, h, layers, reduce_to=0.75, aggrtype='max', aggrpool='max', readout='attn')
                     args.lr = lr
                     args.batch_size = bs
 
@@ -177,9 +184,9 @@ if __name__ == "__main__":
         args.nosave = True
 
         grid_search(args)
+    else:
+        if args.dry:
+            args.dw = True
+            args.nosave = True
 
-    if args.dry:
-        args.dw = True
-        args.nosave = True
-
-    _ = train(args)
+        _ = train(args)
