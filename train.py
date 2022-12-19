@@ -65,7 +65,7 @@ def train(args, model=None, prefix=None):
 
     if model is None:
         model = models.DiffPool(dataset.num_features, args.emb_dim,
-                                args.layers, aggrtype='max', aggrpool='max', readout='max').to(device)
+                                args.layers, aggrtype='max', aggrpool='max', readout='attn', reduce_to=0.50).to(device)
     else:
         model.to(device)
 
