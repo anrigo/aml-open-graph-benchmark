@@ -29,7 +29,6 @@ def grid_search(args):
 
     args.dry = True
     args.dw = True
-    # set to false to save each model checkpoints during the search
     args.nosave = True
 
     results = {'layers': [], 'bs': [],
@@ -50,7 +49,7 @@ def grid_search(args):
                         args.batch_size = bs
                         args.epochs = e
 
-                        best_val, _ = train(args, model, 'tune')
+                        best_val, _ = train(args, model)
 
                         results['layers'].append(layers)
                         results['bs'].append(bs)
