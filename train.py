@@ -49,7 +49,7 @@ def grid_search(args):
                         args.batch_size = bs
                         args.epochs = e
 
-                        best_val, _ = train(args, model)
+                        best_val, _ = train(args, model, train_eval=False)
 
                         results['layers'].append(layers)
                         results['bs'].append(bs)
@@ -81,7 +81,7 @@ def grid_search(args):
         f.write(str_res)
 
 
-def train(args, model=None, prefix=None):
+def train(args, model=None, train_eval=True, prefix=None):
     '''Training loop'''
     device = torch.device(
         'cuda' if not args.cpu and torch.cuda.is_available() else 'cpu')
@@ -168,7 +168,7 @@ def train(args, model=None, prefix=None):
 
         # validate
         print('Validating..')
-        train_metrics = eval(model, train_loader, evaluator, 'train', device)
+        train_metrics = eval(model, train_loader, evaluator, 'train', device) if train_eval else dict()
         val_metrics = eval(model, valid_loader, evaluator, 'val', device)
         metrics = {
             'epoch': epoch,
