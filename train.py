@@ -14,16 +14,17 @@ from pandas import DataFrame
 def grid_search(args):
     dataset = PygGraphPropPredDataset(name="ogbg-molhiv", root='dataset/')
 
-    learning_rates = [0.001]
+    learning_rates = [0.001, 0.01]
     batch_sizes = [64]
-    num_layers = [6, 8, 10]
+    num_layers = [6, 8, 10, 12]
     hidden_dims = [300]
     epochs = [200]
 
     reduce_to = {
         6: 0.25,
         8: 0.40,
-        10: 0.50
+        10: 0.50,
+        12: 0.55
     }
 
     args.dry = True
@@ -44,7 +45,7 @@ def grid_search(args):
                         print('Training ' + config)
 
                         model = models.DiffPool(
-                            dataset.num_features, h, layers, reduce_to=reduce_to[layers], aggrtype='max', aggrpool='max', readout='attn')
+                            dataset.num_features, h, layers, reduce_to=reduce_to[layers], aggrtype='max', aggrpool='max', readout='max')
                         args.lr = lr
                         args.batch_size = bs
                         args.epochs = e
@@ -112,7 +113,7 @@ def train(args, model=None, prefix=None):
 
     if model is None:
         model = models.DiffPool(dataset.num_features, args.emb_dim,
-                                args.layers, aggrtype='max', aggrpool='max', readout='attn').to(device)
+                                args.layers, aggrtype='max', aggrpool='max', readout='max').to(device)
     else:
         model.to(device)
 
