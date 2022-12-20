@@ -14,7 +14,7 @@ from pandas import DataFrame
 def grid_search(args):
     dataset = PygGraphPropPredDataset(name="ogbg-molhiv", root='dataset/')
 
-    learning_rates = [0.001, 0.01]
+    learning_rates = [0.001]
     batch_sizes = [64]
     num_layers = [6, 8, 10]
     hidden_dims = [300]
@@ -38,7 +38,7 @@ def grid_search(args):
             for layers in num_layers:
                 for h in hidden_dims:
                     for e in epochs:
-                        config = f'{args.run}, layers: {layers}, bs: {bs}, hidden_dim: {h}, epochs: {e} lr: {lr}, reduce_to: {reduce_to[layers]}'
+                        config = f'{args.run}, layers: {layers}, bs: {bs}, hidden_dim: {h}, epochs: {e}, lr: {lr}, reduce_to: {reduce_to[layers]}'
 
                         print('Training ' + config)
 
