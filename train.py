@@ -16,15 +16,14 @@ def grid_search(args):
 
     learning_rates = [0.001, 0.01]
     batch_sizes = [64]
-    num_layers = [6, 8, 10, 12]
+    num_layers = [6, 8, 10]
     hidden_dims = [300]
     epochs = [200]
 
     reduce_to = {
         6: 0.25,
         8: 0.40,
-        10: 0.50,
-        12: 0.55
+        10: 0.50
     }
 
     args.dry = True
