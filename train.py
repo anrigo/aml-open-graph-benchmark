@@ -15,7 +15,7 @@ def grid_search(args):
     dataset = PygGraphPropPredDataset(name="ogbg-molhiv", root='dataset/')
 
     learning_rates = [0.001]
-    batch_sizes = [64]
+    batch_sizes = [32, 64]
     num_layers = [6, 8, 10]
     hidden_dims = [300]
     epochs = [200]
@@ -30,8 +30,8 @@ def grid_search(args):
     args.dw = True
     args.nosave = True
 
-    results = {'layers': [], 'bs': [],
-               'hidden_dim': [], 'lr': [], 'reduce_to': [], 'val_rocauc': []}
+    results = {'layers': [], 'bs': [], 'hidden_dim': [],
+               'epochs': [], 'lr': [], 'reduce_to': [], 'val_rocauc': []}
 
     for lr in learning_rates:
         for bs in batch_sizes:
@@ -167,7 +167,8 @@ def train(args, model=None, train_eval=True, prefix=None):
 
         # validate
         print('Validating..')
-        train_metrics = eval(model, train_loader, evaluator, 'train', device) if train_eval else dict()
+        train_metrics = eval(model, train_loader, evaluator,
+                             'train', device) if train_eval else dict()
         val_metrics = eval(model, valid_loader, evaluator, 'val', device)
         metrics = {
             'epoch': epoch,
