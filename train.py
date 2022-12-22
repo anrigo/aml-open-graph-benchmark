@@ -57,7 +57,8 @@ def ogb_eval(args, k=10, offset=0):
     str_res = DataFrame.from_dict(results).to_markdown(index=False)
 
     # save results table
-    savepath = Path(prefix, 'results.md')
+    partition = str(offset) if offset > 0 else ''
+    savepath = Path(prefix, f'{partition}results.md')
     print(f'Saving to {savepath}')
     with open(savepath, 'w') as f:
         print(f'\nResults for: {config}\n')
