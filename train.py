@@ -7,8 +7,63 @@ from torch_geometric.loader import DataLoader
 from tqdm import tqdm
 import models
 import wandb
-from evaluate import eval
+from evaluate import test, eval
 from pandas import DataFrame
+
+
+def ogb_eval(args, k=10, offset=0):
+    dataset = PygGraphPropPredDataset(name="ogbg-molhiv", root='dataset/')
+    args.dw = True
+    args.epochs = 1
+    args.batch_size = 64
+    args.layers = 6
+    args.emb_dim = 300
+    args.lr = 0.001
+
+    config = f'{args.run}, layers: {args.layers}, bs: {args.batch_size}, hidden_dim: {args.emb_dim}, epochs: {args.epochs}, lr: {args.lr}'
+
+    results = {'seed': [], 'test_rocauc': [], 'val_rocauc': []}
+
+    for i in range(k):
+        torch.manual_seed(i+offset)
+        prefix = 'ogb-eval'
+        args.run = str(i+offset)
+        print(f'Training with seed: {args.run}')
+
+        model = models.DiffPool(dataset.num_features, args.emb_dim,
+                                args.layers, aggrtype='max', aggrpool='max', readout='max')
+
+        best_val, best_ep = train(args, model, False, prefix)
+
+        test_res = test(args, model, prefix, checkpoints=[
+                        str(best_ep.item()) + '.pth'], val=False)
+
+        assert len(test_res['test_rocauc']) == 1
+        results['seed'].append(i+offset)
+        results['test_rocauc'].append(test_res['test_rocauc'][0])
+        results['val_rocauc'].append(best_val)
+
+    # compute mean and std over all the seeds
+    test_tens = torch.Tensor(results['test_rocauc'])
+    val_tens = torch.Tensor(results['val_rocauc'])
+    plus_minus = u"\u00B1"
+    results['seed'].append('AVG')
+    results['test_rocauc'].append(
+        f'{test_tens.mean().item()} {plus_minus} {test_tens.std().item()}')
+    results['val_rocauc'].append(
+        f'{val_tens.mean().item()} {plus_minus} {val_tens.std().item()}')
+
+    # to markdown
+    str_res = DataFrame.from_dict(results).to_markdown(index=False)
+
+    # save results table
+    savepath = Path(prefix, 'results.md')
+    print(f'Saving to {savepath}')
+    with open(savepath, 'w') as f:
+        print(f'\nResults for: {config}\n')
+        print(str_res)
+        f.write(f'Results for: {config}\n\n')
+        f.write(str_res)
 
 
 def grid_search(args):
@@ -203,7 +258,8 @@ if __name__ == "__main__":
     parser.add_argument('--epochs', type=int, default=200, help='total epochs')
     parser.add_argument('--batch_size', type=int,
                         default=64, help='batch size')
-    parser.add_argument('--lr', type=float, default=0.001, help='batch size')
+    parser.add_argument('--lr', type=float, default=0.001,
+                        help='learning rate')
     parser.add_argument('--emb_dim', type=int, default=300,
                         help='dimensionality of hidden units in GNNs (default: 300)')
     parser.add_argument('--layers', type=int, default=6,
@@ -222,11 +278,17 @@ if __name__ == "__main__":
 
     parser.add_argument('--tune', action=argparse.BooleanOptionalAction,
                         default=False, help='if True a grid search for hyperparameters tuning will run instead of normal training')
+    parser.add_argument('--ogb', action=argparse.BooleanOptionalAction,
+                        default=False, help='run OGB evaluation: train and evaluate 10 times with different random seeds')
 
     args = parser.parse_args()
 
+    args.ogb = True
+
     if args.tune:
         grid_search(args)
+    elif args.ogb:
+        ogb_eval(args)
     else:
         if args.dry:
             args.dw = True

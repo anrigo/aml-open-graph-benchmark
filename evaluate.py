@@ -8,6 +8,7 @@ from tqdm import tqdm
 import models
 from utils import accuracy
 from pandas import DataFrame
+from copy import deepcopy
 
 
 @torch.no_grad()
@@ -34,9 +35,11 @@ def eval(model, loader, evaluator, split=None, device=None, progress=True):
         batch = batch.to(device)
 
         if isinstance(model, models.DiffPool):
-            pred, *_ = model(batch.x, batch.edge_index, batch.edge_attr, batch.batch)
+            pred, *_ = model(batch.x, batch.edge_index,
+                             batch.edge_attr, batch.batch)
         else:
-            pred = model(batch.x, batch.edge_index, batch.edge_attr, batch.batch)
+            pred = model(batch.x, batch.edge_index,
+                         batch.edge_attr, batch.batch)
 
         y_true.append(batch.y.view(pred.shape).detach().cpu())
         y_pred.append(pred.detach().cpu())
@@ -52,13 +55,17 @@ def eval(model, loader, evaluator, split=None, device=None, progress=True):
     return {f'{split}accuracy': acc, f'{split}rocauc': rocauc_dict['rocauc']}
 
 
-def test(args):
+def test(args, model=None, prefix=None, checkpoints=None, val=True):
     rundir = Path('runs', args.run, 'checkpoints')
+    if prefix is not None:
+        rundir = Path(prefix, rundir)
 
     if not rundir.exists():
         raise FileNotFoundError('Run folder not found')
 
-    checkpoints = [file_ for file_ in os.listdir(rundir) if '.pth' in file_]
+    if checkpoints is None:
+        checkpoints = [file_ for file_ in os.listdir(
+            rundir) if '.pth' in file_]
 
     if len(checkpoints) == 0:
         raise FileNotFoundError('No checkpoint found')
@@ -83,42 +90,53 @@ def test(args):
         for i, chk in enumerate(tcheckpoints):
             tcheckpoints.set_description(
                 f'Evaluating {chk} {i+1} / {len(tcheckpoints)}')
-            model = models.SAGE(dataset.num_features, args.emb_dim,
-                               args.layers, aggrtype='attn', readout='attn').to(device)
+
+            if model is None:
+                model = models.SAGE(dataset.num_features, args.emb_dim,
+                                    args.layers, aggrtype='attn', readout='attn').to(device)
 
             state_dict = torch.load(Path(rundir, chk))
             model.load_state_dict(state_dict)
 
             metrics_test = eval(model, test_loader, evaluator,
                                 'test', device, progress=False)
-            metrics_val = eval(model, valid_loader, evaluator,
-                               'val', device, progress=False)
+            if val:
+                metrics_val = eval(model, valid_loader, evaluator,
+                                   'val', device, progress=False)
 
             # append results
             results['model'].append(chk)
             results['test_rocauc'].append(metrics_test['test_rocauc'])
-            results['val_rocauc'].append(metrics_val['val_rocauc'])
+            results['val_rocauc'].append(metrics_val['val_rocauc'] if val else '-')
+
+    results_numerical = deepcopy(results)
 
     # highlight best models
     max_idx = results['test_rocauc'].index(max(results['test_rocauc']))
     results['model'][max_idx] = f"**{results['model'][max_idx]}**"
     results['test_rocauc'][max_idx] = f"**{results['test_rocauc'][max_idx]}**"
 
-    max_idx = results['val_rocauc'].index(max(results['val_rocauc']))
-    results['model'][max_idx] = f"**{results['model'][max_idx]}**"
-    results['val_rocauc'][max_idx] = f"**{results['val_rocauc'][max_idx]}**"
+    if val:
+        max_idx = results['val_rocauc'].index(max(results['val_rocauc']))
+        results['model'][max_idx] = f"**{results['model'][max_idx]}**"
+        results['val_rocauc'][max_idx] = f"**{results['val_rocauc'][max_idx]}**"
 
     # to markdown
     str_res = DataFrame.from_dict(results).to_markdown(index=False)
 
     # save results table
-    savepath = Path('runs', args.run, 'results.md')
-    print(f'Saving to {savepath}')
-    with open(savepath, 'w') as f:
-        print(f'\nResults for: {args.run}\n')
-        print(str_res)
-        f.write(f'Results for: {args.run}\n\n')
-        f.write(str_res)
+    if not args.nosave:
+        savepath = Path('runs', args.run, 'results.md')
+        if prefix is not None:
+            savepath = Path(prefix, savepath)
+        print(f'Saving to {savepath}')
+        with open(savepath, 'w') as f:
+            print(f'\nResults for: {args.run}\n')
+            print(str_res)
+            f.write(f'Results for: {args.run}\n\n')
+            f.write(str_res)
+
+    return results_numerical
 
 
 if __name__ == '__main__':
@@ -132,8 +150,10 @@ if __name__ == '__main__':
                         help='number of GNN layers (default: 6)')
     parser.add_argument('--cpu', action=argparse.BooleanOptionalAction,
                         default=False, help='run on cpu only')
+    parser.add_argument('--nosave', action=argparse.BooleanOptionalAction,
+                        default=False, help='results will not be saved on file')
     parser.add_argument('--run', type=str, help='run name')
 
     args = parser.parse_args()
 
-    test(args)
+    _ = test(args)

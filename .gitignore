@@ -4,3 +4,4 @@ dataset/
 wandb/
 runs/
 .vscode/
+ogb-eval
