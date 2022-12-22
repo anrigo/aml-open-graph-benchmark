@@ -14,7 +14,7 @@ from pandas import DataFrame
 def ogb_eval(args, k=10, offset=0):
     dataset = PygGraphPropPredDataset(name="ogbg-molhiv", root='dataset/')
     args.dw = True
-    args.epochs = 1
+    args.epochs = 200
     args.batch_size = 64
     args.layers = 6
     args.emb_dim = 300
