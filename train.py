@@ -11,7 +11,7 @@ from evaluate import test, eval
 from pandas import DataFrame
 
 
-def ogb_eval(args, k=5, offset=0):
+def ogb_eval(args, k=10, offset=0):
     dataset = PygGraphPropPredDataset(name="ogbg-molhiv", root='dataset/')
     args.dw = True
     args.epochs = 200
