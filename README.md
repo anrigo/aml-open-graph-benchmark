@@ -8,6 +8,7 @@ If you can't, simply install python 3.10, wandb, pandas, tabulate, PyTorch 1.13,
 
 In this example I'm using CUDA 11.6:
 ```
+conda install 'python<3.11'
 conda install pytorch torchvision torchaudio pytorch-cuda=11.6 pyg ogb -c pytorch -c nvidia -c pyg
 conda install wandb pandas tabulate
 ```
