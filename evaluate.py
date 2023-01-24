@@ -56,6 +56,7 @@ def eval(model, loader, evaluator, split=None, device=None, progress=True):
 
 
 def test(args, model=None, prefix=None, checkpoints=None, val=True):
+    ''' Evaluates all checkpoints present in the run folder and saves the results as a markdown table '''
     rundir = Path('runs', args.run, 'checkpoints')
     if prefix is not None:
         rundir = Path(prefix, rundir)
@@ -92,15 +93,17 @@ def test(args, model=None, prefix=None, checkpoints=None, val=True):
                 f'Evaluating {chk} {i+1} / {len(tcheckpoints)}')
 
             if model is None:
-                model = models.SAGE(dataset.num_features, args.emb_dim,
-                                    args.layers, aggrtype='attn', readout='attn').to(device)
+                model = models.DiffPool(dataset.num_features, args.emb_dim,
+                                args.layers, aggrtype='max', aggrpool='max', readout='max').to(device)
 
             state_dict = torch.load(Path(rundir, chk))
             model.load_state_dict(state_dict)
 
+            # evaluate on test set
             metrics_test = eval(model, test_loader, evaluator,
                                 'test', device, progress=False)
             if val:
+                # evaluate on validation set
                 metrics_val = eval(model, valid_loader, evaluator,
                                    'val', device, progress=False)
 

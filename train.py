@@ -11,7 +11,15 @@ from evaluate import test, eval
 from pandas import DataFrame
 
 
-def ogb_eval(args, k=10, offset=0):
+def ogb_eval(args, k: int=10, offset: int=0):
+    '''
+    OGB Evaluation procedure: trains and evaluates the model with 10 different random seeds,
+    computes the mean and standard deviation, then saves the results as a markdown table
+    Args:
+        - args: training arguments
+        - k: number of random seeds
+        - offset: used to split the `k` training runs among different machines
+    '''
     dataset = PygGraphPropPredDataset(name="ogbg-molhiv", root='dataset/')
     args.dw = True
     args.epochs = 200
@@ -68,6 +76,10 @@ def ogb_eval(args, k=10, offset=0):
 
 
 def grid_search(args):
+    '''
+    Trains and evaluates the model on all possible configurations of hyperparameters in the defined search space,
+    then saves the results as a markdown table
+    '''
     dataset = PygGraphPropPredDataset(name="ogbg-molhiv", root='dataset/')
 
     learning_rates = [0.001]
